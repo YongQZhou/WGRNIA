@@ -1,0 +1,22 @@
+Package: WGRNIA
+Type: Package
+Title: Wrapping gene regulatory network inference algorithms
+Version: 1.00.0
+Date: 2021-3-15
+Author: Yaohua Hu, Xinlin Hu, Yongqiang Zhou
+Maintainer: Yongqiang Zhou <zhouyq67@mail2.sysu.edu.cn>
+Description: This package including of several gene network inference algorithms to help users of gene regulatory network construction tools evaluate the performance under experimental data.
+Depends: R (>= 3.6)
+License: GPL (>=2)
+Encoding: UTF-8
+Imports: MASS, foba, lars, stats, ROCR, methods, progress, parallel,
+        utils, readr, stringr, Hmisc, psych, igraph, networkD3, ggsci,
+        ggthemes, RColorBrewer, WGCNA, foreach, iterators, doParallel,
+        ggplot2, doRNG, parmigene, bc3net, c3net, minet, PCIT, GeneNet,
+        corpcor, fdrtool, GENIE3, data.table, ennet, graph, Matrix
+Suggests: knitr, rmarkdown
+LazyData: TRUE
+RoxygenNote: 7.1.1
+VignetteBuilder: knitr
+NeedsCompilation: no
+Packaged: 2021-09-14 03:32:40 UTC; 31610
