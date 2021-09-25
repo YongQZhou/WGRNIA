@@ -1,0 +1,148 @@
+#' grn_main
+#' The pipeline of WGRNIA.
+#' @description A framework for benchmarking of gene regulatory network inference. This is the main function to call different algorithms for network inference and evaluate this network.
+#'
+#' @param A Gene expression data of transcriptome factors (i.e. basis function in machine learning).
+#' The class of A are required to be 'matrix' and the dimension of matrix A is m * n.
+#' @param B Gene expression data of target genes (i.e. observation in machine learning).
+#' The class of B are required to be 'matrix' and the dimension of matrix B is u * n.
+#' @param seq Sparsity level of solution. User can input a sequence of sparsity, i.e. 's <- c(1,2,3,4,5)'.
+#' @param X Gene expression data of Chromatin immunoprecipitation or zero matrix
+#' (i.e. initial iterative point in machine learning).The class of X are required to be
+#' 'matrix' and the dimension of matrix X is u * m.
+#' @param max.steps Maximum iteration used in calculation. Default: 200.
+#' @param TF The Transcription Factors (TFs) The default value NULL means that all the genes are used as candidate regulators. Default: NULL.
+#' @param gene A vector of characters containing the target genes.
+#' @param cl.cores The number of cores in computer that you want to utilize. Default: 2.
+#' @param algorithm The algorithm of inferring grn.Including 'pearson','spearman','kendall','WGCNA','bc3net','c3net','aracne.a','aracne.m',
+#' 'clr','mrnet','mrnetb','GeneNet','Genie3.ET','Genie3.RF','pict','ADMM', 'ADMMHalf',
+#' 'ADMMHard', 'ITAHalf', 'ITAHard', 'ISTA', 'SPGL0', 'SPGL1', 'CoSaMP', 'OMP', 'FoBa' and 'Lars'.
+#' @param HGSmat A matrix which is the high-throughput golden standard. Rows contain genes and columns contain tfs ,the value between in one or zero .
+#' @param file A connection, or a character string naming the file to write to. The default not save the grn matrix. Default: NULL.
+#' @param verbose If set to TRUE, a feedback on the progress of the progress of the calculations is given. Default: TRUE.
+#' @param bootstrap_num Number of the times of resampling with bootstrap method.The number of new datasets.Default: 5.
+#' @param bootstrap_seed If set to Ture, set.seed for keeping the results the same for each run. Default: TRUE.
+#' @param sym If set to TRUE, only the regulatory relationship in the high-throughput gold standard is considered, and the value of 0 is not considered, so that the number of true positive and false positive is equal, and both false negative and true negative are 0.
+#' If set to FALSE, It is assumed that the regulatory relationships that do not exist in the high-throughput gold standard are not regulatory.The value as zero. Default: FALSE.
+#' @param num The number of gene regulator imformation. Default: NULL
+#'
+#' @details This is a pipeline for benchmark of gene regulatory network inference and evaluation.Given the expression matrix, gene and high-throughput gold standard, then select the methods from the given network inference methods, and use these methods for network inference and evaluation.
+#' This function provides a bootstrap method, which can repeatedly sample the expression matrix to form multiple new data to evaluate the stability of the inference method of regulatory network.
+#'
+#' @return A data.frame with the evaluation parameters of the inferred gene regulatory network.
+#' @export
+#'
+#' @examples
+#' ntf <- 30
+#' ngene <- 100
+#' nsample <- 10
+#' set.seed(123)
+#' A <- matrix(rnorm(ntf * nsample,0,1),ntf,nsample)
+#' TF <- paste0('G',1:ntf)
+#' B <- matrix(rnorm(ngene * nsample,0,1),ngene,nsample)
+#' X <- matrix(0,ngene,ntf)
+#' s <-  c(1,2,3,6,10,15,20)
+#' gene <- paste0('G',1:ngene)
+#' HGSmat <- matrix(0,ngene,ntf)
+#' HGSmat[sample(ngene * ntf,0.2 * ngene * ntf)] <- 1
+#' algorithm <- c('pearson','spearman','kendall','WGCNA','bc3net','c3net','aracne.a','aracne.m',
+#'                'clr','mrnet','mrnetb','GeneNet','Genie3.ET','Genie3.RF','pcit','ennet','ADMM',
+#'                'ADMMHalf','ADMMHard', 'ITAHalf', 'ITAHard', 'ISTA', 'SPGL0',
+#'                'SPGL1', 'CoSaMP', 'OMP', 'FoBa' , 'Lars')
+#' algorithm <- c('pearson','aracne.a','mrnet','pcit','ADMM')
+#' conlist <- grn_main(A=A,B=B,X=X,seq = s,gene=gene,TF=TF,algorithm = algorithm,
+#'                     HGSmat = HGSmat,file=TRUE, verbose=TRUE)
+grn_main <- function(A=NULL, B ,seq=NULL, X=NULL, max.steps = 200, TF=NULL, gene, cl.cores=2, algorithm, HGSmat, file=TRUE, verbose=TRUE, bootstrap_num=5,bootstrap_seed=TRUE,sym = F,num = NULL){
+  if (is.null(TF)) {
+    TF <- gene
+  }
+  auclist <- c()
+  aucprlist <- c()
+  timelist <- c()
+  conlist <- c()
+  g <- c()
+  reg_algorithm <- c('ADMM','ADMMHalf','ADMMHard', 'ITAHalf', 'ITAHard', 'ISTA', 'SPGL0', 'SPGL1', 'CoSaMP', 'OMP', 'FoBa','Lars')
+  if (bootstrap_num > 1) {
+    B <- bootstrap(B,num = bootstrap_num,seed = bootstrap_seed)
+  }else {B <- list(B)}
+  for (alg in algorithm) {
+    nt <- 0
+    if (file) {
+      for (datexpr in B) {
+
+        if (bootstrap_num > 1) {
+          nt <- nt + 1
+          if (alg %in% reg_algorithm) {
+            if (sum(abs(X))!=0) {
+              reg_name <- paste0(alg,'_bootstrap',nt,'_CHIP.txt')
+            }else{reg_name <- paste0(alg,'_bootstrap',nt,'.txt')}
+            temp <- demo_reg(A,B=datexpr,seq,X,alg,max.steps,TF,gene,cl.cores,file=reg_name,verbose = verbose)
+          }else{ temp <- demo_other(datexpr=datexpr,algorithm = alg,TF=TF,gene=gene,file=paste0(alg,'_bootstrap',nt,'.txt'),cl.cores=cl.cores,verbose = verbose)}
+
+        }else {
+          if (alg %in% reg_algorithm) {
+            if (sum(abs(X))!=0) {
+              reg_name <- paste0(alg,'_CHIP.txt')
+            }else{reg_name <- paste0(alg,'.txt')}
+            temp <- demo_reg(A,B=datexpr,seq,X,alg,max.steps,TF,gene,cl.cores=cl.cores,file=reg_name,verbose = verbose)
+          }else {temp <- demo_other(datexpr=datexpr,algorithm = alg,TF=TF,gene=gene,file=paste0(alg,'.txt'),cl.cores=cl.cores,verbose = verbose)}}
+
+        grn <- temp$grn
+        time <- temp$time
+        if (nrow(grn)!=0 ) {
+          dat <- calpl(HGSmat,grn,sym = sym,num = num)
+          if ( ! is.null(dat)) {
+            con <- confusion(dat)
+            auc <- calauc(dat)
+          }else
+            {con = c(rep(0,8))
+              auc = c(0,0)}
+
+        }else{
+          con = c(rep(0,8))
+          auc = c(0,0)
+        }
+        auclist <- c(auclist,auc[1])
+        aucprlist <- c(aucprlist,auc[2])
+        conlist <- rbind(conlist,con)
+        timelist <- c(timelist,as.numeric(time))
+        g <- c(g,alg)
+      }
+    }
+    if (!file){
+      for (datexpr in B) {
+        if (alg %in% reg_algorithm) {
+          temp <- demo_reg(A,B=datexpr,seq = seq,X,alg,max.steps,TF,gene,cl.cores = cl.cores,file=NULL,verbose = verbose)
+        }else{temp <- demo_other(datexpr=datexpr,algorithm = alg,TF=TF,gene=gene,file=NULL,cl.cores=cl.cores,verbose = verbose)}
+        grn <- temp$grn
+        time <- temp$time
+        if (nrow(grn)!=0 ) {
+          dat <- calpl(HGSmat,grn,sym = sym,num = num)
+          if ( ! is.null(dat)) {
+            con <- confusion(dat)
+            auc <- calauc(dat)
+          }else
+          {con = c(rep(0,8))
+          auc = c(0,0)}
+
+        }else{
+          con = c(rep(0,8))
+          auc = c(0,0)
+        }
+        auclist <- c(auclist,auc[1])
+        aucprlist <- c(aucprlist,auc[2])
+        conlist <- rbind(conlist,con)
+        timelist <- c(timelist,as.numeric(time))
+        g <- c(g,alg)
+      }
+    }
+  }
+  conlist <- as.data.frame(conlist)
+  conlist$aucroc <- auclist
+  conlist$aucpr <- aucprlist
+  conlist <- cbind(algorithm=g,conlist)
+  rownames(conlist) <- c(1:nrow(conlist))
+  conlist$time <- timelist
+  return(conlist)
+
+}
