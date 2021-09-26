@@ -47,7 +47,7 @@ X <- matrix(0,ngene,ntf)
 s <- c(1:10)
 gene <- paste0('G',1:ngene)
 HGSmat <- matrix(0,ngene,ntf)
-HGSmat[sample(ngene * ntf,0.2 * ngene * ntf)] <- 1
+HGSmat[sample(ngene * ntf,0.1 * ngene * ntf)] <- 1
 ```
 
 ## Network inference
@@ -92,15 +92,15 @@ grn[1:5,1:5]
 Calculate evaluation parameters FP, FN, precision, recall, F1-score, AUC and AUCPR.
 
 ```
-dat <- calpl(HGSmat = HGSmat,grn = grn,sym = T)
+dat <- calpl(HGSmat = HGSmat,grn = grn,sym = F)
 confu <- confusion(dat = dat)
 print(confu)
 ## precision    recall  F1-score        TP        FP        FN 
-##    0.5000    1.0000    0.6667   34.0000   34.0000    0.0000
+##    0.1538    0.0733    0.0993   22.0000  121.0000  278.0000
 auc <- calauc(dat = dat)
 print(auc)
 ##  AUCROC   AUCPR 
-## 0.59213 0.57890
+## 0.51414 0.11190
 ```
 
 ## ROC and PR curve
@@ -110,7 +110,6 @@ p1 <- draw.plot(dat,method = 'roc',algname = 'pearson')
 p2 <- draw.plot(dat,method = 'pr',algname = 'pearson')
 print(p1)
 ```
-
 ![img](https://github.com/YongQZhou/WGRNIA/blob/master/png/p1.png)
 
 ```
@@ -144,25 +143,23 @@ algorithm <- c('pearson','aracne.a','mrnet','pcit','ADMM')
 conlist <- grn_main(A=A,B=B,X=X,seq = s,gene=gene,TF=TF,algorithm = algorithm,
                     HGSmat = HGSmat,file=TRUE, verbose=FALSE,bootstrap_num = 5)
 print(conlist[1:10,])
-##    algorithm precision recall F1-score  TP  FP FN  aucroc   aucpr       time
-## 1    pearson       0.5      1   0.6667 104 104  0 0.47328 0.50122 0.52789402
-## 2    pearson       0.5      1   0.6667 103 103  0 0.53747 0.57274 0.01795197
-## 3    pearson       0.5      1   0.6667 156 156  0 0.49149 0.48740 0.02094388
-## 4    pearson       0.5      1   0.6667 120 120  0 0.44837 0.45960 0.01695585
-## 5    pearson       0.5      1   0.6667 144 144  0 0.52667 0.53229 0.01994491
-## 6   aracne.a       0.5      1   0.6667  58  58  0 0.48915 0.48681 0.05485201
-## 7   aracne.a       0.5      1   0.6667  55  55  0 0.61587 0.58341 0.02991891
-## 8   aracne.a       0.5      1   0.6667  44  44  0 0.45868 0.47182 0.03094411
-## 9   aracne.a       0.5      1   0.6667  63  63  0 0.48148 0.49732 0.02892303
-## 10  aracne.a       0.5      1   0.6667  38  38  0 0.51004 0.55341 0.02988815
+##    algorithm precision recall F1-score TP  FP  FN  aucroc   aucpr       time
+## 1    pearson    0.1207 0.1767   0.1434 53 386 247 0.51618 0.11255 0.12199903
+## 2    pearson    0.1283 0.2133   0.1602 64 435 236 0.52880 0.12739 0.04601097
+## 3    pearson    0.0952 0.2500   0.1379 75 713 225 0.49140 0.09997 0.06400490
+## 4    pearson    0.0901 0.1767   0.1194 53 535 247 0.48994 0.09882 0.04604197
+## 5    pearson    0.1149 0.2500   0.1574 75 578 225 0.51953 0.11320 0.06100011
+## 6   aracne.a    0.1347 0.1100   0.1211 33 212 267 0.51580 0.11260 0.04399896
+## 7   aracne.a    0.1565 0.1200   0.1358 36 194 264 0.52538 0.12646 0.03797507
+## 8   aracne.a    0.1041 0.0767   0.0883 23 198 277 0.50128 0.10151 0.04399300
+## 9   aracne.a    0.1048 0.1100   0.1073 33 282 267 0.50191 0.10274 0.04399896
+## 10  aracne.a    0.0845 0.0600   0.0702 18 195 282 0.49385 0.09908 0.04300499
 dat <- data.frame(alg = algorithm,auc = conlist$aucroc)
 p <- draw_box(dat,'AUC')
 print(p)
 ```
 
 ![img](https://github.com/YongQZhou/WGRNIA/blob/master/png/p3.png)
-
-
 
 
 
